@@ -2,6 +2,7 @@
 #define _SIMPLEHTTP_H
 
 #include "queue.h"
+#include "options.h"
 #include <event.h>
 #include <evhttp.h>
 
