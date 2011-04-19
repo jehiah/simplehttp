@@ -34,7 +34,7 @@ struct Option {
 
 struct Option *option_list = NULL;
 
-
+int format_option_name(char *option_name);
 int option_sort(struct Option *a, struct Option *b)
 {
     return strcmp(a->option_name, b->option_name);
@@ -85,6 +85,10 @@ int option_parse_command_line(int argc, char **argv) {
             option_name_len -= strlen(value);
             *value = '\0';
             value++;
+        }
+        if (format_option_name(option_name)) {
+            fprintf(stderr, "ERROR: unknown option \"--%s\"\n", option_name); // option_str ?
+            return 0;
         }
         HASH_FIND(hh, option_list, option_name, option_name_len, option);
         if (!option) {
@@ -183,13 +187,20 @@ char *option_get_str(const char *option_name) {
 
 struct Option *new_option(const char *option_name, int required, const char *help){
     struct Option *option;
-    HASH_FIND_STR(option_list, option_name, option);
+    char *tmp_option_name = strdup(option_name);
+    if (format_option_name(tmp_option_name)) {
+        fprintf(stderr, "ERROR: option %s is invalid\n", option_name);
+        free(tmp_option_name);
+        return NULL;
+    }
+
+    HASH_FIND_STR(option_list, tmp_option_name, option);
     if (option){
-        fprintf(stderr, "ERROR: option %s is already defined\n", option_name);
+        fprintf(stderr, "ERROR: option %s is already defined\n", tmp_option_name);
         return NULL;
     }
     option = malloc(sizeof(struct Option));
-    option->option_name = strdup(option_name);
+    option->option_name = tmp_option_name;
     option->required = required;
     option->found = 0;
     option->value_str = NULL;
@@ -307,5 +318,19 @@ void free_options() {
     }
 }
 
-// format_option_name(char *option_name)
-// return option_name.lower().replace('-','_')
+int format_option_name(char *option_name) {
+    char *ptr = option_name;
+    char *end = ptr + strlen(option_name);
+    while(ptr <= end && *ptr != NULL) {
+        if (*ptr >= 'A' && *ptr <= 'Z') {
+            *ptr += 32;
+        } else if (*ptr == '_') {
+            *ptr = '-';
+        } else if (*ptr < 48 && *ptr != 45){
+            fprintf(stderr, "invalid char %c\n", *ptr);
+            return 1;
+        }
+        ptr++;
+    }
+    return 0;
+}

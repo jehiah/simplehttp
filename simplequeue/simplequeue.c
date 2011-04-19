@@ -209,6 +209,7 @@ main(int argc, char **argv)
     simplehttp_set_cb("/dump*", dump, NULL);
     simplehttp_set_cb("/stats*", stats, NULL);
     simplehttp_main();
+    free_options();
     
     if (overflow_log_fp) {
         while (depth) {
