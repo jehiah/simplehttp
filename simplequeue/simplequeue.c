@@ -177,7 +177,6 @@ void usage()
 int
 main(int argc, char **argv)
 {
-    int i;
     TAILQ_INIT(&queues);
 
     define_simplehttp_options();

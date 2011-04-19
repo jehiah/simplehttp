@@ -26,8 +26,7 @@ typedef struct cb_entry {
 } cb_entry;
 TAILQ_HEAD(, cb_entry) callbacks;
 
-static int debug = 0;
-int verbose = 0;
+int simplehttp_logging = 0;
 int callback_count = 0;
 uint64_t request_count = 0;
 
@@ -118,9 +117,7 @@ void generic_request_handler(struct evhttp_request *req, void *arg)
     struct simplehttp_request *s_req;
     struct evbuffer *evb = evbuffer_new();
     
-    if (debug) {
-        fprintf(stderr, "request for %s from %s\n", req->uri, req->remote_host);
-    }
+    // fprintf(stderr, "request for %s from %s\n", req->uri, req->remote_host);
     
     request_count++;
     
@@ -183,55 +180,30 @@ void simplehttp_set_cb(char *path, void (*cb)(struct evhttp_request *, struct ev
 void define_simplehttp_options() {
     option_define_str("address", OPT_OPTIONAL, "0.0.0.0", NULL, NULL, "address to listen on");
     option_define_int("port", OPT_OPTIONAL, 8080, NULL, NULL, "port to listen on");
+    option_define_bool("enable_logging", OPT_OPTIONAL, 0, NULL, NULL, "request logging");
+    option_define_bool("daemon", OPT_OPTIONAL, 0, NULL, NULL, "daemonize process");
+    option_define_str("root", OPT_OPTIONAL, NULL, NULL, NULL, "chdir and run from this directory");
+    option_define_str("user", OPT_OPTIONAL, NULL, NULL, NULL, "run as this user");
+    option_define_str("group", OPT_OPTIONAL, NULL, NULL, NULL, "run as this group");
 }
 
 int simplehttp_main()
 {
     uid_t uid = 0;
     gid_t gid = 0;
-    char *root = NULL;
-    char *garg = NULL;
-    char *uarg = NULL;
-    char *address = NULL;
-    int port;
-    int daemon = 0;
     pid_t pid, sid;
     int errno;
     struct evhttp *httpd;
     struct event pipe_ev;
     
-    address = option_get_str("address");
-    port = option_get_int("port");
-    // opterr = 0;
-    // 
-    // while ((ch = getopt(argc, argv, "a:p:d:D:r:u:g:V")) != -1) {
-    //     switch (ch) {
-    //         case 'a':
-    //             address = optarg;
-    //             break;
-    //         case 'p':
-    //             port = atoi(optarg);
-    //             break;
-    //         case 'd':
-    //             debug = 1;
-    //             break;
-    //         case 'r':
-    //             root = optarg;
-    //             break;
-    //         case 'D':
-    //             daemon = 1;
-    //             break;
-    //         case 'g':
-    //             garg = optarg;
-    //             break;
-    //         case 'u':
-    //             uarg = optarg;
-    //             break;
-    //         case 'V':
-    //             verbose = 1;
-    //             break;
-    //     }
-    // }
+    char *address = option_get_str("address");
+    int port = option_get_int("port");
+
+    int daemon = option_get_int("daemon");
+    char *root = option_get_str("root");
+    char *user = option_get_str("user");
+    char *group = option_get_str("group");
+    simplehttp_logging = option_get_int("enable_logging");
     
     if (daemon) {
         pid = fork();
@@ -248,21 +220,21 @@ int simplehttp_main()
         }
     }
     
-    if (uarg != NULL) {
-        uid = get_uid(uarg);
-        gid = get_user_gid(uarg);
+    if (user != NULL) {
+        uid = get_uid(user);
+        gid = get_user_gid(user);
         if (uid < 0) {
-            uid = atoi(uarg);
-            uarg = NULL;
+            uid = atoi(user);
+            user = NULL;
         }
         if (uid == 0) {
             err(1, "invalid user");
         }
     }
-    if (garg != NULL) {
-        gid = get_gid(garg);
+    if (group != NULL) {
+        gid = get_gid(group);
         if (gid < 0) {
-            gid = atoi(garg);
+            gid = atoi(group);
             if (gid == 0) {
                 err(1, "invalid group");
             }
@@ -279,8 +251,8 @@ int simplehttp_main()
     }
     
     if (getuid() == 0) {
-        if (uarg != NULL) {
-            if (initgroups(uarg, (int) gid) != 0) {
+        if (user != NULL) {
+            if (initgroups(user, (int) gid) != 0) {
                 err(1, "initgroups() failed");
             }
         } else {

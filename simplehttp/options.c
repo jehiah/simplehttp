@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "options.h"
 #include "uthash.h"
@@ -39,7 +40,7 @@ int option_sort(struct Option *a, struct Option *b)
     return strcmp(a->option_name, b->option_name);
 }
 
-int help_cb(int *value) {
+int help_cb(int value) {
     option_help();
     return 0;
 }
@@ -242,6 +243,7 @@ int option_define_bool(const char *option_name, int required, int default_val, i
 
 void option_help() {
     struct Option *option, *tmp_option;
+    char buffer[1024] = {'\0'};
     
     // lazily define help option
     HASH_FIND_STR(option_list, "help", option);
@@ -252,34 +254,43 @@ void option_help() {
     fprintf(stdout, "--------------\n\n");
     HASH_SORT(option_list, option_sort);
     HASH_ITER(hh, option_list, option, tmp_option) {
-        fprintf(stdout, "\t--%s", option->option_name);
+        switch(option->option_type) {
+        case OPT_STR:
+            sprintf(buffer, "--%s=<str>", option->option_name);
+            break;
+        case OPT_INT:
+            sprintf(buffer, "--%s=<int>", option->option_name);
+            break;
+        case OPT_BOOL:
+            if (option->default_int != 0) {
+                sprintf(buffer, "--%s=True|False", option->option_name);
+            } else {
+                sprintf(buffer, "--%s", option->option_name);
+            }
+            break;
+        }
+        fprintf(stdout, "  %-22s", buffer);
+        if (option->help) {
+            fprintf(stdout, " %s", option->help);
+        }
+        fprintf(stdout, "\n");
         switch(option->option_type) {
         case OPT_STR:
             if (option->default_str) {
-                fprintf(stdout, "=%s", option->default_str);
-            } else {
-                fprintf(stdout, "=<str>");
+                if (isatty(fileno(stdout))) {
+                    fprintf(stdout, "%25sdefault: %c[1m%s%c[0m\n", "", 27, option->default_str, 27);
+                } else {
+                    fprintf(stdout, "%25sdefault: %s\n", "", option->default_str);
+                }
             }
             break;
         case OPT_INT:
             if (option->default_int) {
-                fprintf(stdout, "=%d", option->default_int);
-            } else {
-                fprintf(stdout, "=<int>");
-            }
-            break;
-        case OPT_BOOL:
-            if (option->default_int != 0) {
-                fprintf(stdout, "=True|False");
+                fprintf(stdout, "%25sdefault: %d\n", "", option->default_int);
             }
             break;
         default:
-            fprintf(stdout, "=<value>");
             break;
-        }
-        fprintf(stdout, "\n");
-        if (option->help) {
-            fprintf(stdout, "\t\t%s\n", option->help);
         }
     }
     fprintf(stdout, "\n");
