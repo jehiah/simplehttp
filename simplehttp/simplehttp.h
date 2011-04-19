@@ -64,5 +64,6 @@ int get_argument_format(struct evkeyvalq *args);
 int get_int_argument(struct evkeyvalq *args, char *key, int default_value);
 double get_double_argument(struct evkeyvalq *args, char *key, double default_value);
 
+void define_simplehttp_options();
 
 #endif

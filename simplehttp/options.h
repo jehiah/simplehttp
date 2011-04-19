@@ -1,12 +1,19 @@
+#ifndef _SIMPLEHTTP_OPTIONS_H
+#define _SIMPLEHTTP_OPTIONS_H
 
 enum required_option {
-	REQUIRED = 1,
-	OPTIONAL = 0
+	OPT_REQUIRED = 1,
+	OPT_OPTIONAL = 0
 };
 
-enum option_type {
-    OPT_BOOL = 1,
-    OPT_STR = 2,
-    OPT_INT = 3,
-    OPT_FLOAT = 4
-};
+int option_parse_command_line(int argc, char **argv);
+int option_define_int(const char *option_name, int required, int default_val, int *dest, int(*cb)(int value), const char *help);
+int option_define_str(const char *option_name, int required, char *default_val, char **dest, int(*cb)(char *value), const char *help);
+int option_define_bool(const char *option_name, int required, int default_val, int *dest, int(*cb)(int value), const char *help);
+int option_help(int arg);
+int option_get_int(const char *option_name);
+char *option_get_str(const char *option_name);
+
+void free_options();
+
+#endif

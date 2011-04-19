@@ -170,10 +170,7 @@ void usage()
 {   
     fprintf(stderr, "%s: A simple http buffer queue.\n", progname);
     fprintf(stderr, "Version %s, http://code.google.com/p/simplehttp/\n", version);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "usage:\n");
-    fprintf(stderr, "  %s -- [--overflow_log] [--max_bytes] [--max_depth]\n", progname);
-    fprintf(stderr, "\n");
+    option_help(0);
     exit(1);
 }   
 
@@ -183,21 +180,32 @@ main(int argc, char **argv)
     int i;
     TAILQ_INIT(&queues);
 
-    for (i=1; i < argc; i++) {
-        if(!strcmp(argv[i], "--overflow_log")) {
-            if(++i >= argc) usage();
-            overflow_log = argv[i];
-        } else if(!strcmp(argv[i], "--max_bytes")) {
-            if(++i >= argc) usage();
-            max_bytes = strtod(argv[i], (char **) NULL);
-        } else if(!strcmp(argv[i], "--max_depth")) {
-            if(++i >= argc) usage();
-            max_depth = strtod(argv[i], (char **) NULL);
-            fprintf(stdout, "max_depth set to %"PRIu64"\n", max_depth);
-        } else if (!strcmp(argv[i], "--help")) {
-            usage();
-        }
+    define_simplehttp_options();
+    option_define_str("overflow_log", OPT_OPTIONAL, NULL, &overflow_log, NULL, "file to write data beyond --bax-depth or --max-bytes");
+    // float?
+    option_define_int("max_bytes", OPT_OPTIONAL, 0, NULL, NULL, "memory limit");
+    // option_define_int("max_depth", OPT_OPTIONAL, NULL, &max_depth, NULL, "maximum items in queue");
+    // 
+    // for (i=1; i < argc; i++) {
+    //     if(!strcmp(argv[i], "--overflow_log")) {
+    //         if(++i >= argc) usage();
+    //         overflow_log = argv[i];
+    //     } else if(!strcmp(argv[i], "--max_bytes")) {
+    //         if(++i >= argc) usage();
+    //         max_bytes = strtod(argv[i], (char **) NULL);
+    //     } else if(!strcmp(argv[i], "--max_depth")) {
+    //         if(++i >= argc) usage();
+    //         max_depth = strtod(argv[i], (char **) NULL);
+    //         fprintf(stdout, "max_depth set to %"PRIu64"\n", max_depth);
+    //     } else if (!strcmp(argv[i], "--help")) {
+    //         usage();
+    //     }
+    // }
+    option_help(1);
+    if (!option_parse_command_line(argc, argv)){
+        return 1;
     }
+    max_bytes = (size_t)option_get_int("max_bytes");
     
     if (overflow_log) {
         overflow_log_fp = fopen(overflow_log, "a");
@@ -209,7 +217,7 @@ main(int argc, char **argv)
     }
 
     fprintf(stderr, "Version %s, http://code.google.com/p/simplehttp/\n", version);
-    fprintf(stderr, "\"%s -- --help\" for options\n", progname);
+    fprintf(stderr, "\"%s --help\" for options\n", progname);
     simplehttp_init();
     signal(SIGHUP, hup_handler);
     simplehttp_set_cb("/put*", put, NULL);

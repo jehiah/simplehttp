@@ -1,7 +1,7 @@
 LIBEVENT ?= /usr/local
 TARGET ?= /usr/local
 
-CFLAGS = -I. -I$(LIBEVENT)/include -Wall -g -O2
+CFLAGS = -I. -I$(LIBEVENT)/include -Wall -g
 LIBS = -L. -L$(LIBEVENT)/lib -levent -lm
 
 AR = ar

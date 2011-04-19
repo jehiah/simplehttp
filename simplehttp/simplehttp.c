@@ -16,6 +16,7 @@
 #include "simplehttp.h"
 #include "stat.h"
 #include "request.h"
+#include "options.h"
 
 typedef struct cb_entry {
     char *path;
@@ -177,6 +178,12 @@ void simplehttp_set_cb(char *path, void (*cb)(struct evhttp_request *, struct ev
     printf("registering callback for path \"%s\"\n", path);
 }
 
+void define_simplehttp_options() {
+    option_define_str("address", OPT_OPTIONAL, "0.0.0.0", NULL, NULL, "address to listen on");
+    option_define_int("port", OPT_OPTIONAL, 8080, NULL, NULL, "port to listen on");
+    option_define_bool("help", OPT_OPTIONAL, 0, NULL, option_help, "list usage");
+}
+
 int simplehttp_main(int argc, char **argv)
 {
     uid_t uid = 0;
@@ -191,37 +198,38 @@ int simplehttp_main(int argc, char **argv)
     struct evhttp *httpd;
     struct event pipe_ev;
     
-    address = "0.0.0.0";
-    port = 8080;
-    opterr = 0;
-    while ((ch = getopt(argc, argv, "a:p:d:D:r:u:g:V")) != -1) {
-        switch (ch) {
-            case 'a':
-                address = optarg;
-                break;
-            case 'p':
-                port = atoi(optarg);
-                break;
-            case 'd':
-                debug = 1;
-                break;
-            case 'r':
-                root = optarg;
-                break;
-            case 'D':
-                daemon = 1;
-                break;
-            case 'g':
-                garg = optarg;
-                break;
-            case 'u':
-                uarg = optarg;
-                break;
-            case 'V':
-                verbose = 1;
-                break;
-        }
-    }
+    address = option_get_str("address");
+    port = option_get_int("port");
+    // opterr = 0;
+    // 
+    // while ((ch = getopt(argc, argv, "a:p:d:D:r:u:g:V")) != -1) {
+    //     switch (ch) {
+    //         case 'a':
+    //             address = optarg;
+    //             break;
+    //         case 'p':
+    //             port = atoi(optarg);
+    //             break;
+    //         case 'd':
+    //             debug = 1;
+    //             break;
+    //         case 'r':
+    //             root = optarg;
+    //             break;
+    //         case 'D':
+    //             daemon = 1;
+    //             break;
+    //         case 'g':
+    //             garg = optarg;
+    //             break;
+    //         case 'u':
+    //             uarg = optarg;
+    //             break;
+    //         case 'V':
+    //             verbose = 1;
+    //             break;
+    //     }
+    // }
     
     if (daemon) {
         pid = fork();
