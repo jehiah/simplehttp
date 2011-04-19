@@ -31,6 +31,8 @@ int verbose = 0;
 int callback_count = 0;
 uint64_t request_count = 0;
 
+int help_cb(int *value);
+
 static void ignore_cb(int sig, short what, void *arg)
 {
 }
@@ -181,20 +183,20 @@ void simplehttp_set_cb(char *path, void (*cb)(struct evhttp_request *, struct ev
 void define_simplehttp_options() {
     option_define_str("address", OPT_OPTIONAL, "0.0.0.0", NULL, NULL, "address to listen on");
     option_define_int("port", OPT_OPTIONAL, 8080, NULL, NULL, "port to listen on");
-    option_define_bool("help", OPT_OPTIONAL, 0, NULL, option_help, "list usage");
 }
 
-int simplehttp_main(int argc, char **argv)
+int simplehttp_main()
 {
     uid_t uid = 0;
     gid_t gid = 0;
-    char *address;
     char *root = NULL;
     char *garg = NULL;
     char *uarg = NULL;
+    char *address = NULL;
+    int port;
     int daemon = 0;
-    int port, ch, errno;
     pid_t pid, sid;
+    int errno;
     struct evhttp *httpd;
     struct event pipe_ev;
     

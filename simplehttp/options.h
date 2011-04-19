@@ -10,7 +10,7 @@ int option_parse_command_line(int argc, char **argv);
 int option_define_int(const char *option_name, int required, int default_val, int *dest, int(*cb)(int value), const char *help);
 int option_define_str(const char *option_name, int required, char *default_val, char **dest, int(*cb)(char *value), const char *help);
 int option_define_bool(const char *option_name, int required, int default_val, int *dest, int(*cb)(int value), const char *help);
-int option_help(int arg);
+void option_help();
 int option_get_int(const char *option_name);
 char *option_get_str(const char *option_name);
 

@@ -32,7 +32,7 @@ struct simplehttp_stats {
 };
 
 void simplehttp_init();
-int simplehttp_main(int argc, char **argv);
+int simplehttp_main();
 void simplehttp_set_cb(char *path, void (*cb)(struct evhttp_request *, struct evbuffer *,void *), void *ctx);
 
 uint64_t simplehttp_request_id(struct evhttp_request *req);
