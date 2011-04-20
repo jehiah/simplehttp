@@ -2,15 +2,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h> // for basename()
 
 #include "options.h"
 #include "uthash.h"
 
 enum option_type {
     OPT_BOOL = 1,
-    OPT_STR = 2,
+    OPT_STR = 2,    
     OPT_INT = 3,
-    OPT_FLOAT = 4
+    OPT_FLOAT = 4,
+    OPT_CHAR = 5,
 };
 
 struct Option {
@@ -20,19 +22,24 @@ struct Option {
     int found;
     char *value_str;
     int value_int;
+    char value_char;
     
     int default_int;
     char *default_str;
+    char default_char;
     int *dest_int;
     char **dest_str;
+    char *dest_char;
     int(*cb_int)(int value);
     int(*cb_str)(char *value);
+    int(*cb_char)(char value);
     
     char *help;
     UT_hash_handle hh;
 };
 
 struct Option *option_list = NULL;
+char *option_process_name = NULL;
 
 int format_option_name(char *option_name);
 int option_sort(struct Option *a, struct Option *b)
@@ -68,7 +75,9 @@ int option_parse_command_line(int argc, char **argv) {
         option_define_bool("help", OPT_OPTIONAL, 0, NULL, help_cb, "list usage");
     }
     
+    option_process_name=basename(argv[0]);
     for (i=1; i < argc; i++) {
+        // fprintf(stdout, "DEBUG: option %d : %s\n", i, argv[i]);
         option_str = argv[i];
         // find the option_name
         if (strncmp(option_str, "--", 2) != 0) {
@@ -103,6 +112,21 @@ int option_parse_command_line(int argc, char **argv) {
         // TODO: strip quotes from value
         
         switch(option->option_type) {
+        case OPT_CHAR:
+            if (strlen(value) != 1) {
+                fprintf(stderr, "ERROR: argument for --%s must be a single character (got %s)\n", option_name, value);
+                return 0;
+            }
+            option->value_char = value[0];
+            if (option->cb_char) {
+                if (!option->cb_char(option->value_char)) {
+                    return 0;
+                }
+            }
+            if (option->dest_char) {
+                *(option->dest_char) = option->value_char;
+            }
+            break;
         case OPT_STR:
             option->value_str = value;
             if (option->cb_str) {
@@ -165,10 +189,17 @@ int option_parse_command_line(int argc, char **argv) {
 */
 int option_get_int(const char *option_name) {
     struct Option *option;
-    HASH_FIND_STR(option_list, option_name, option);
+    char *tmp_option_name = strdup(option_name);
+    if (format_option_name(tmp_option_name)) {
+        free(tmp_option_name);
+        return -1;
+    }
+    HASH_FIND_STR(option_list, tmp_option_name, option);
+    free(tmp_option_name);
     if (!option) {
         return -1;
     }
+    if (option->option_type != OPT_INT && option->option_type != OPT_BOOL) {return -1;}
     if (option->found) {
         return option->value_int;
     }
@@ -177,12 +208,36 @@ int option_get_int(const char *option_name) {
 
 char *option_get_str(const char *option_name) {
     struct Option *option;
-    HASH_FIND_STR(option_list, option_name, option);
+    char *tmp_option_name = strdup(option_name);
+    if (format_option_name(tmp_option_name)) {
+        free(tmp_option_name);
+        return NULL;
+    }
+    HASH_FIND_STR(option_list, tmp_option_name, option);
+    free(tmp_option_name);
     if (!option) {return NULL;}
+    if (option->option_type != OPT_STR) {return NULL;}
     if (option->found) {
         return option->value_str;
     }
     return option->default_str;
+}
+
+char option_get_char(const char *option_name) {
+    struct Option *option;
+    char *tmp_option_name = strdup(option_name);
+    if (format_option_name(tmp_option_name)) {
+        free(tmp_option_name);
+        return '\0';
+    }
+    HASH_FIND_STR(option_list, tmp_option_name, option);
+    free(tmp_option_name);
+    if (!option) {return '\0';}
+    if (option->option_type != OPT_CHAR) {return '\0';}
+    if (option->found) {
+        return option->value_char;
+    }
+    return option->default_char;
 }
 
 struct Option *new_option(const char *option_name, int required, const char *help){
@@ -205,12 +260,16 @@ struct Option *new_option(const char *option_name, int required, const char *hel
     option->found = 0;
     option->value_str = NULL;
     option->value_int = 0;
+    option->value_char = '\0';
     option->cb_int = NULL;
     option->default_int = 0;
     option->dest_int = NULL;
     option->cb_str = NULL;
     option->default_str = NULL;
     option->dest_str = NULL;
+    option->cb_char = NULL;
+    option->default_char = 0;
+    option->dest_char = NULL;
     option->help = NULL;
     if (help) {
         option->help = strdup(help);
@@ -252,6 +311,16 @@ int option_define_bool(const char *option_name, int required, int default_val, i
     return 1;
 }
 
+int option_define_char(const char *option_name, int required, char default_val, char *dest, int(*cb)(char value), const char *help) {
+    struct Option *option = new_option(option_name, required, help);
+    if (!option) {return -1;}
+    option->option_type = OPT_CHAR;
+    option->default_char = default_val;
+    option->dest_char = dest;
+    option->cb_char = cb;
+    return 1;
+}
+
 void option_help() {
     struct Option *option, *tmp_option;
     char buffer[1024] = {'\0'};
@@ -262,12 +331,18 @@ void option_help() {
         option_define_bool("help", OPT_OPTIONAL, 0, NULL, help_cb, "list usage");
     }
     
-    fprintf(stdout, "--------------\n\n");
+    fprintf(stdout, "\n");
+    fprintf(stdout, "%s accepts the following options, listed alphabetically.\n\n", option_process_name);
+    fprintf(stdout, "OPTIONS\n");
+    
     HASH_SORT(option_list, option_sort);
     HASH_ITER(hh, option_list, option, tmp_option) {
         switch(option->option_type) {
         case OPT_STR:
             sprintf(buffer, "--%s=<str>", option->option_name);
+            break;
+        case OPT_CHAR:
+            sprintf(buffer, "--%s=<char>", option->option_name);
             break;
         case OPT_INT:
             sprintf(buffer, "--%s=<int>", option->option_name);
@@ -286,6 +361,11 @@ void option_help() {
         }
         fprintf(stdout, "\n");
         switch(option->option_type) {
+        case OPT_CHAR:
+            if (option->default_char) {
+                fprintf(stdout, "%25sdefault:%c\n", "", option->default_char);
+            }
+            break;
         case OPT_STR:
             if (option->default_str) {
                 if (isatty(fileno(stdout))) {
@@ -321,7 +401,7 @@ void free_options() {
 int format_option_name(char *option_name) {
     char *ptr = option_name;
     char *end = ptr + strlen(option_name);
-    while(ptr <= end && *ptr != NULL) {
+    while(ptr <= end && *ptr != '\0') {
         if (*ptr >= 'A' && *ptr <= 'Z') {
             *ptr += 32;
         } else if (*ptr == '_') {

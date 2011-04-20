@@ -6,6 +6,8 @@
 #include "simplehttp/queue.h"
 #include "simplehttp/simplehttp.h"
 
+#define VERSION "1.2";
+
 struct queue_entry {
     TAILQ_ENTRY(queue_entry) entries;
     size_t bytes;
@@ -15,7 +17,6 @@ struct queue_entry {
 TAILQ_HEAD(, queue_entry) queues;
 
 char *progname = "simplequeue";
-char *version = "1.1";
 char *overflow_log = NULL;
 FILE *overflow_log_fp = NULL;
 uint64_t max_depth = 0;
@@ -169,10 +170,15 @@ dump(struct evhttp_request *req, struct evbuffer *evb, void *ctx)
 void usage()
 {   
     fprintf(stderr, "%s: A simple http buffer queue.\n", progname);
-    fprintf(stderr, "Version %s, http://code.google.com/p/simplehttp/\n", version);
+    fprintf(stderr, "Version %s, http://code.google.com/p/simplehttp/\n", VERSION);
     option_help();
     exit(1);
 }   
+
+int version_cb(int value) {
+    fprintf(stdout, "Version: %s\n", VERSION);
+    return 0;
+}
 
 int
 main(int argc, char **argv)
@@ -184,6 +190,7 @@ main(int argc, char **argv)
     // float?
     option_define_int("max_bytes", OPT_OPTIONAL, 0, NULL, NULL, "memory limit");
     option_define_int("max_depth", OPT_OPTIONAL, 0, NULL, NULL, "maximum items in queue");
+    option_define_bool("version", OPT_OPTIONAL, 0, NULL, version_cb, VERSION);
     
     if (!option_parse_command_line(argc, argv)){
         return 1;
@@ -197,11 +204,11 @@ main(int argc, char **argv)
             perror("fopen failed: ");
             exit(1);
         }
-        fprintf(stdout, "opened overflow_log: %s\n", overflow_log);
+        fprintf(stdout, "opened --overflow-log: %s\n", overflow_log);
     }
 
-    fprintf(stderr, "Version %s, http://code.google.com/p/simplehttp/\n", version);
-    fprintf(stderr, "\"%s --help\" for options\n", progname);
+    fprintf(stderr, "Version: %s, http://code.google.com/p/simplehttp/\n", VERSION);
+    fprintf(stderr, "use --help for options\n");
     simplehttp_init();
     signal(SIGHUP, hup_handler);
     simplehttp_set_cb("/put*", put, NULL);
