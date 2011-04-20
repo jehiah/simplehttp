@@ -351,7 +351,7 @@ int main(int argc, char **argv)
 {
     define_simplehttp_options();
     option_define_str("db_file", OPT_REQUIRED, NULL, &db_filename, NULL, NULL);
-    option_define_char("field_separator", OPT_OPTIONAL, '\0', &deliminator, NULL, "feild separator (eg: comma, tab, pipe). default: TAB");
+    option_define_char("field_separator", OPT_OPTIONAL, '\0', &deliminator, NULL, "field separator (eg: comma, tab, pipe). default: TAB");
     option_define_bool("version", OPT_OPTIONAL, 0, NULL, version_cb, VERSION);
     
     if (!option_parse_command_line(argc, argv)){

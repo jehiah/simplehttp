@@ -10,7 +10,7 @@ Sorted database server. Makes a tab (or comma) delimitated sorted file accessibl
 	--daemon               daemonize process
 	--db-file=<str>       
 	--enable-logging       request logging
-	--field-separator=<char> feild separator (eg: comma, tab, pipe). default: TAB
+	--field-separator=<char> field separator (eg: comma, tab, pipe). default: TAB
 	--group=<str>          run as this group
 	--help                 list usage
 	--port=<int>           port to listen on
