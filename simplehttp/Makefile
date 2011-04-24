@@ -29,6 +29,7 @@ install:
 	/usr/bin/install utlist.h $(TARGET)/include/simplehttp/
 	/usr/bin/install utstring.h $(TARGET)/include/simplehttp/
 	/usr/bin/install utarray.h $(TARGET)/include/simplehttp/
+	/usr/bin/install options.h $(TARGET)/include/simplehttp/
 
 clean:
 	rm -rf *.a *.o testserver *.dSYM
